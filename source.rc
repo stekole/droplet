@@ -1,0 +1,12 @@
+#!/bin/bash
+################################################
+#   SOURCE THIS FILE 
+#
+#    source source.rc
+#      or
+#    . source.rc
+#
+################################################
+export TF_VAR_digitalocean_token=
+export TF_VAR_digitalocean_ssh_fingerprint=""
+
