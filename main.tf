@@ -4,7 +4,7 @@ terraform {
   required_providers {
     digitalocean = {
       source = "digitalocean/digitalocean"
-      version = "1.22.2"
+      version = "2.5.1"
     }
   }
 }
@@ -17,9 +17,15 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-data "digitalocean_ssh_key" "key" {
-  name = var.do_ssh_fingerprint
+#data "digitalocean_ssh_key" "key" {
+#  name = var.do_ssh_fingerprint
+#}
+
+resource "digitalocean_ssh_key" "ssh" {
+    name = "pie"
+    public_key = "${file("~/.ssh/digital_ocean_key.pub")}"
 }
+
 
 # Create a new Web Droplet running ubuntu in the FRA1 region
 resource "digitalocean_droplet" "server" {
@@ -28,7 +34,7 @@ resource "digitalocean_droplet" "server" {
     region = "fra1"
     size   = "s-1vcpu-1gb"
     ssh_keys =[
-      data.digitalocean_ssh_key.key.id
+      digitalocean_ssh_key.ssh.id
     ]
     connection {
       host = self.ipv4_address
@@ -41,13 +47,42 @@ resource "digitalocean_droplet" "server" {
       inline = [
         "export PATH=$PATH:/usr/bin",
         # install nginx
-        "export EMAIL=izmennik01@gmail.com",
-        "git clone https://github.com/izmennik01/scripts.git",
-        "./scripts/bootstrap.sh",
-        #"./scripts/home-sync.sh",
       ]
   }
 }
+
+resource "digitalocean_firewall" "personal" {
+  name = "only-22"
+
+  droplet_ids = [digitalocean_droplet.server.id]
+
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "22"
+    source_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "tcp"
+    port_range            = "53"
+    destination_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "udp"
+    port_range            = "53"
+    destination_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "icmp"
+    destination_addresses = ["0.0.0.0/0"]
+  }
+  outbound_rule {
+    protocol              = "tcp"
+    port_range            = "1-65535"
+    destination_address   = ["0.0.0.0/0"]
+  }
+}
+
+
 
 # gimmie ip
 output "digitalocean_droplet_ip" {
